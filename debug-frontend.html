@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend Debug Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet">
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .code-block-container { margin: 1rem 0; border-radius: 8px; overflow: hidden; border: 1px solid #333; background: #1e1e1e; }
+        .code-block-header { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1rem; background: #2d2d2d; border-bottom: 1px solid #333; }
+        .code-language { font-size: 0.8rem; color: #888; font-weight: 500; text-transform: uppercase; }
+        pre { margin: 0; padding: 1rem; background: #1e1e1e; color: #f8f8f2; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Frontend Code Rendering Debug</h1>
+    
+    <div class="test-section">
+        <h2>1. Test Raw API Response</h2>
+        <div id="raw-response"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Test Marked.js Parsing</h2>
+        <div id="marked-output"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Test Enhanced Code Block Creation</h2>
+        <div id="enhanced-output"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Test Full Pipeline</h2>
+        <div id="full-pipeline"></div>
+    </div>
+
+    <script>
+        // Simulate the API response you got
+        const apiResponse = `Sure, here is a simple "Hello, World!" script in Python with comments:
+
+\`\`\`python
+# This is a simple Python script that prints "Hello, World!" to the console.
+
+# Define the main function
+def main():
+    # Print the statement "Hello, World!"
+    print("Hello, World!")
+
+# Check if this script is being run directly (not imported as a module)
+if __name__ == "__main__":
+    # Call the main function to execute the script
+    main()
+\`\`\`
+
+### Explanation:
+1. **Function Definition:** The \`def main():\` line defines a function named \`main\`.
+2. **Print Statement:** \`print("Hello, World!")\` prints the string to the console.`;
+
+        // Test 1: Show raw response
+        document.getElementById('raw-response').innerHTML = '<pre>' + apiResponse.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</pre>';
+
+        // Test 2: Test marked.js parsing
+        console.log('Marked available:', typeof marked !== 'undefined');
+        if (typeof marked !== 'undefined') {
+            const markedOutput = marked.parse(apiResponse);
+            document.getElementById('marked-output').innerHTML = markedOutput;
+            console.log('Marked output:', markedOutput);
+        } else {
+            document.getElementById('marked-output').innerHTML = '<p style="color: red;">Marked.js not available!</p>';
+        }
+
+        // Test 3: Enhanced code block function (copied from your script.js)
+        function createEnhancedCodeBlock(language, code) {
+            const escapedCode = escapeHtml(code);
+            const lines = code.split('\n').length;
+            const isLong = lines > 10;
+            const blockId = 'code_' + Math.random().toString(36).substr(2, 9);
+
+            return `
+                <div class="code-block-container" id="${blockId}">
+                    <div class="code-block-header">
+                        <span class="code-language">${language}</span>
+                    </div>
+                    <div class="code-block-content">
+                        <pre><code class="language-${language}">${escapedCode}</code></pre>
+                    </div>
+                </div>
+            `;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Test enhanced code block
+        const testCode = `# This is a simple Python script
+def main():
+    print("Hello, World!")
+
+if __name__ == "__main__":
+    main()`;
+        
+        const enhancedBlock = createEnhancedCodeBlock('python', testCode);
+        document.getElementById('enhanced-output').innerHTML = enhancedBlock;
+
+        // Test 4: Full pipeline (copied from your formatMessageContent function)
+        function formatMessageContent(content) {
+            if (typeof marked !== 'undefined') {
+                marked.setOptions({
+                    highlight: function(code, lang) {
+                        if (window.Prism && window.Prism.languages[lang]) {
+                            return window.Prism.highlight(code, window.Prism.languages[lang], lang);
+                        }
+                        return code;
+                    },
+                    breaks: true,
+                    gfm: true
+                });
+
+                // Extract code blocks and replace with placeholders
+                const codeBlocks = [];
+                let index = 0;
+                const processedContent = content.replace(/```(\w+)?\n([\s\S]*?)```/g, (match, lang, code) => {
+                    codeBlocks.push({ lang: lang || 'text', code: code.trim() });
+                    return `__CODE_BLOCK_${index++}__`;
+                });
+
+                // Parse markdown
+                let html = marked.parse(processedContent);
+
+                // Restore code blocks with enhanced formatting
+                codeBlocks.forEach((block, index) => {
+                    const codeHtml = createEnhancedCodeBlock(block.lang, block.code);
+                    html = html.replace(`__CODE_BLOCK_${index}__`, codeHtml);
+                });
+
+                return html;
+            } else {
+                return '<p style="color: red;">Marked.js not available for full pipeline test!</p>';
+            }
+        }
+
+        const fullPipelineOutput = formatMessageContent(apiResponse);
+        document.getElementById('full-pipeline').innerHTML = fullPipelineOutput;
+
+        // Apply syntax highlighting
+        setTimeout(() => {
+            if (window.Prism) {
+                window.Prism.highlightAll();
+                console.log('Prism highlighting applied');
+            }
+        }, 100);
+    </script>
+</body>
+</html>

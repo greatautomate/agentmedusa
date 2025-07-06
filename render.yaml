@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: medusaxd-ai-agent
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: AGENT_ID
+        sync: false
+      - key: CHAT_PASSWORD
+        sync: false
+      - key: PORT
+        value: 10000
+

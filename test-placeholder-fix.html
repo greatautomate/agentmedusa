@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Placeholder Fix</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #1a1a1a; color: #fff; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #333; border-radius: 8px; }
+        pre { background: #000; padding: 10px; border-radius: 4px; overflow-x: auto; }
+        .code-block-container { background: #2d2d2d; padding: 15px; border-radius: 8px; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>Test Placeholder Fix</h1>
+    
+    <div class="test-section">
+        <h2>1. Test Input Content</h2>
+        <pre id="input-content"></pre>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. After Code Block Extraction</h2>
+        <pre id="after-extraction"></pre>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. After Marked.js Parsing</h2>
+        <pre id="after-marked"></pre>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Final Result</h2>
+        <div id="final-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Console Output</h2>
+        <pre id="console-output" style="max-height: 300px; overflow-y: auto;"></pre>
+    </div>
+
+    <script>
+        // Capture console logs
+        const originalLog = console.log;
+        const consoleOutput = document.getElementById('console-output');
+        
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            consoleOutput.textContent += args.join(' ') + '\n';
+            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+        };
+
+        // Test content that matches what you're seeing
+        const testContent = `Certainly! Here is a simple Python "Hello, World!" program:
+
+\`\`\`python
+# This is a simple Python program
+print("Hello, World!")
+\`\`\`
+
+You can run this code in any Python environment.`;
+
+        document.getElementById('input-content').textContent = testContent;
+
+        // Test the extraction process
+        function testCodeBlockProcessing(content) {
+            console.log('=== Starting Code Block Processing Test ===');
+            console.log('Input content:', content);
+            
+            // Step 1: Extract code blocks
+            const codeBlocks = [];
+            let processedContent = content.replace(/```(\w+)?\n?([\s\S]*?)```/g, (match, lang, code) => {
+                const index = codeBlocks.length;
+                console.log('Found code block:', { lang: lang || 'text', code: code.trim() });
+                codeBlocks.push({ lang: lang || 'text', code: code.trim() });
+                return `<!--MEDUSA_CODE_BLOCK_${index}-->`;
+            });
+            
+            console.log('Processed content after extraction:', processedContent);
+            console.log('Code blocks found:', codeBlocks.length);
+            document.getElementById('after-extraction').textContent = processedContent;
+            
+            // Step 2: Parse with marked
+            if (typeof marked !== 'undefined') {
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true
+                });
+                
+                let html = marked.parse(processedContent);
+                console.log('HTML after marked.parse:', html);
+                document.getElementById('after-marked').textContent = html;
+                
+                // Step 3: Replace placeholders
+                codeBlocks.forEach((block, index) => {
+                    const placeholder = `<!--MEDUSA_CODE_BLOCK_${index}-->`;
+                    const codeHtml = createSimpleCodeBlock(block.lang, block.code);
+                    console.log(`Replacing placeholder: ${placeholder}`);
+                    console.log(`Placeholder exists in HTML: ${html.includes(placeholder)}`);
+                    html = html.replace(placeholder, codeHtml);
+                    console.log(`After replacement, placeholder still exists: ${html.includes(placeholder)}`);
+                });
+                
+                console.log('Final HTML:', html);
+                document.getElementById('final-result').innerHTML = html;
+                
+                return html;
+            } else {
+                console.log('Marked.js not available');
+                return 'Marked.js not available';
+            }
+        }
+
+        function createSimpleCodeBlock(language, code) {
+            return `<div class="code-block-container">
+                <strong>Language: ${language}</strong>
+                <pre><code>${escapeHtml(code)}</code></pre>
+            </div>`;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Run the test
+        testCodeBlockProcessing(testContent);
+    </script>
+</body>
+</html>
